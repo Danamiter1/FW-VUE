@@ -1,0 +1,36 @@
+body {
+  font-family: Arial, sans-serif;
+}
+#todo-list {
+  list-style-type: none;
+  padding: 0;
+}
+.todo-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px;
+  border-bottom: 1px solid #ccc;
+  cursor: pointer;
+}
+.completed {
+  text-decoration: line-through;
+  color: #888;
+}
+.task-buttons {
+  display: flex;
+  gap: 8px;
+}
+.delete-btn, .edit-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px;
+}
+.delete-btn:hover {
+  color: red;
+}
+.edit-btn:hover {
+  color: blue;
+}
