@@ -1,88 +1,176 @@
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, computed } from 'vue'
 
-const user = reactive({
-  firstName: '',
-  lastName: '',
-  gender: '',
-  password: '',
-  confirmPassword: ''
+const history = ref([])
+const title = ref('')
+const amount = ref(0)
+
+const addTransaction = () => {
+  if (!title.value || amount.value === 0) return
+  
+  history.value.push({
+    text: title.value,
+    amount: Number(amount.value),
+    id: Date.now()
+  })
+  
+  title.value = ''
+  amount.value = 0
+}
+
+const incomeBalance = computed(() => {
+  return history.value
+    .filter(item => item.amount > 0)
+    .reduce((sum, item) => sum + item.amount, 0)
 })
 
-const showPassword = ref(false)
+const outcomeBalance = computed(() => {
+  return history.value
+    .filter(item => item.amount < 0)
+    .reduce((sum, item) => sum + item.amount, 0)
+})
 
-const register = () => {
-  console.log('Данные пользователя:', JSON.parse(JSON.stringify(user)))
-}
-
-const isPasswordsMatch = () => {
-  return user.password === user.confirmPassword && user.password !== ''
-}
+const totalBalance = computed(() => {
+  return history.value.reduce((sum, item) => sum + item.amount, 0)
+})
 </script>
 
 <template>
-  <form @submit.prevent="register">
-    <div>
-      <label>Имя пользователя:</label>
-      <input type="text" v-model="user.firstName" />
+  <div class="container">
+    <h1>Учет расходов</h1>
+    
+    <div class="balance-container" v-if="history.length">
+      <div class="balance-item">
+        <h3 style="color: black;">Доходы:</h3>
+        <span class="income">{{ incomeBalance }}</span>
+      </div>
+      <div class="balance-item">
+        <h3 style="color: black;">Расходы:</h3>
+        <span class="outcome">{{ outcomeBalance }}</span>
+      </div>
+      <div class="balance-item">
+        <h3 style="color: black;">Итого:</h3>
+        <span :class="totalBalance >= 0 ? 'income' : 'outcome'">
+          {{ totalBalance }}
+        </span>
+      </div>
     </div>
+    <p v-else>Вы не совершали финансовых операций</p>
     
-    <div>
-      <label>Фамилия пользователя:</label>
-      <input type="text" v-model="user.lastName" />
+    <form @submit.prevent="addTransaction">
+      <div class="form-group">
+        <label>Название операции:</label>
+        <input 
+          type="text" 
+          v-model.trim="title" 
+          placeholder="Например: Зарплата" 
+          required
+        >
+      </div>
+      <div class="form-group">
+        <label>Сумма:</label>
+        <input 
+          type="number" 
+          v-model.number="amount" 
+          placeholder="Например: 1000 или -500" 
+          required
+        >
+      </div>
+      <button type="submit">Добавить операцию</button>
+    </form>
+    
+    <div class="history" v-if="history.length">
+      <h2>История операций</h2>
+      <ul>
+        <li 
+          v-for="item in history" 
+          :key="item.id"
+          :class="item.amount > 0 ? 'income' : 'outcome'"
+        >
+          {{ item.text }}: {{ item.amount }}
+        </li>
+      </ul>
     </div>
-    
-    <div>
-      <label>Пол:</label>
-      <label>
-        <input type="radio" v-model="user.gender" value="male" /> Мужской
-      </label>
-      <label>
-        <input type="radio" v-model="user.gender" value="female" /> Женский
-      </label>
-    </div>
-    
-    <div>
-      <label>Пароль:</label>
-      <input :type="showPassword ? 'text' : 'password'" v-model="user.password" />
-    </div>
-    
-    <div>
-      <label>Подтверждение пароля:</label>
-      <input :type="showPassword ? 'text' : 'password'" v-model="user.confirmPassword" />
-    </div>
-    
-    <button
-      type="button"
-      @mousedown="showPassword = true"
-      @mouseup="showPassword = false"
-      @mouseleave="showPassword = false"
-    >
-      Показать пароль
-    </button>
-    
-    <button type="submit" :disabled="!isPasswordsMatch()">
-      Зарегистрироваться
-    </button>
-  </form>
-  
-  <p v-if="user.firstName || user.lastName || user.gender">
-    Пользователь: {{ user.firstName }} {{ user.lastName }}. 
-    {{ user.gender === 'male' ? 'Мужского' : 'Женского' }} пола.
-  </p>
+  </div>
 </template>
 
 <style scoped>
-form div {
-  margin-bottom: 10px;
+.container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: Arial, sans-serif;
+}
+
+.balance-container {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+}
+
+.balance-item {
+  text-align: center;
+}
+
+.form-group {
+  margin-bottom: 15px;
 }
 
 label {
-  display: inline-block;
-  width: 200px;
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-sizing: border-box;
 }
 
 button {
-  margin: 5px;
+  background-color: #4CAF50;
+  color: white;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+button:hover {
+  background-color: #45a049;
+}
+
+.history {
+  margin-top: 30px;
+}
+
+ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+li {
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 4px;
+  position: relative;
+  border: 1px solid #ddd;
+}
+
+.income {
+  color: green;
+  border-left: 4px solid green;
+}
+
+.outcome {
+  color: red;
+  border-left: 4px solid red;
 }
 </style>
