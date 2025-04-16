@@ -1,176 +1,146 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 
-const history = ref([])
-const title = ref('')
-const amount = ref(0)
+const number = ref('')
+const category = ref('trivia')
+const fact = ref(null)
+const isLoading = ref(false)
+const error = ref(null)
 
-const addTransaction = () => {
-  if (!title.value || amount.value === 0) return
+const categories = [
+  { value: 'trivia', label: 'Случайный факт' },
+  { value: 'math', label: 'Факт из областики математики' },
+  { value: 'year', label: 'Факт о годе' }
+]
+
+const fetchFact = async () => {
+  if (!number.value) return
   
-  history.value.push({
-    text: title.value,
-    amount: Number(amount.value),
-    id: Date.now()
-  })
+  isLoading.value = true
+  error.value = null
+  fact.value = null
   
-  title.value = ''
-  amount.value = 0
+  try {
+    const response = await fetch(`http://numbersapi.com/${number.value}/${category.value}?json`)
+    const data = await response.json()
+    
+    if (data.found) {
+      fact.value = data.text
+    } else {
+      error.value = `${number.value} - ${category.value === 'year' ? 'скучный год' : 'скучное число'}`
+    }
+  } catch (err) {
+    error.value = 'Произошла ошибка при получении данных'
+  } finally {
+    isLoading.value = false
+  }
 }
 
-const incomeBalance = computed(() => {
-  return history.value
-    .filter(item => item.amount > 0)
-    .reduce((sum, item) => sum + item.amount, 0)
-})
-
-const outcomeBalance = computed(() => {
-  return history.value
-    .filter(item => item.amount < 0)
-    .reduce((sum, item) => sum + item.amount, 0)
-})
-
-const totalBalance = computed(() => {
-  return history.value.reduce((sum, item) => sum + item.amount, 0)
-})
+const handleKeyPress = (e) => {
+  if (e.key === 'Enter') {
+    fetchFact()
+  }
+}
 </script>
 
 <template>
-  <div class="container">
-    <h1>Учет расходов</h1>
+  <div class="app">
+    <h1>Факты о числах</h1>
     
-    <div class="balance-container" v-if="history.length">
-      <div class="balance-item">
-        <h3 style="color: black;">Доходы:</h3>
-        <span class="income">{{ incomeBalance }}</span>
-      </div>
-      <div class="balance-item">
-        <h3 style="color: black;">Расходы:</h3>
-        <span class="outcome">{{ outcomeBalance }}</span>
-      </div>
-      <div class="balance-item">
-        <h3 style="color: black;">Итого:</h3>
-        <span :class="totalBalance >= 0 ? 'income' : 'outcome'">
-          {{ totalBalance }}
-        </span>
-      </div>
+    <div class="controls">
+      <input
+        type="text"
+        v-model="number"
+        @keypress="handleKeyPress"
+        placeholder="Введите число или год"
+      />
+      
+      <select v-model="category">
+        <option 
+          v-for="option in categories" 
+          :key="option.value" 
+          :value="option.value"
+        >
+          {{ option.label }}
+        </option>
+      </select>
+      
+      <button @click="fetchFact" :disabled="isLoading || !number">
+        Поиск
+      </button>
     </div>
-    <p v-else>Вы не совершали финансовых операций</p>
     
-    <form @submit.prevent="addTransaction">
-      <div class="form-group">
-        <label>Название операции:</label>
-        <input 
-          type="text" 
-          v-model.trim="title" 
-          placeholder="Например: Зарплата" 
-          required
-        >
+    <div class="result">
+      <div v-if="isLoading" class="loader">Загрузка...</div>
+      
+      <div v-if="error" class="error">{{ error }}</div>
+      
+      <div v-if="fact" class="fact" style="color: black;">
+        {{ fact }}
       </div>
-      <div class="form-group">
-        <label>Сумма:</label>
-        <input 
-          type="number" 
-          v-model.number="amount" 
-          placeholder="Например: 1000 или -500" 
-          required
-        >
-      </div>
-      <button type="submit">Добавить операцию</button>
-    </form>
-    
-    <div class="history" v-if="history.length">
-      <h2>История операций</h2>
-      <ul>
-        <li 
-          v-for="item in history" 
-          :key="item.id"
-          :class="item.amount > 0 ? 'income' : 'outcome'"
-        >
-          {{ item.text }}: {{ item.amount }}
-        </li>
-      </ul>
     </div>
   </div>
 </template>
 
 <style scoped>
-.container {
+.app {
   max-width: 600px;
   margin: 0 auto;
   padding: 20px;
   font-family: Arial, sans-serif;
 }
 
-.balance-container {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 20px;
-  padding: 15px;
-  background-color: #f5f5f5;
-  border-radius: 8px;
-}
-
-.balance-item {
+h1 {
   text-align: center;
+  color: #333;
 }
 
-.form-group {
-  margin-bottom: 15px;
+.controls {
+  margin: auto;
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
 }
 
-label {
-  display: block;
-  margin-bottom: 5px;
-  font-weight: bold;
-}
-
-input {
-  width: 100%;
-  padding: 8px;
+input, select {
+  padding: 10px;
   border: 1px solid #ddd;
   border-radius: 4px;
-  box-sizing: border-box;
+  flex: 1;
 }
 
 button {
+  padding: 10px 20px;
   background-color: #4CAF50;
   color: white;
-  padding: 10px 15px;
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 16px;
 }
 
-button:hover {
-  background-color: #45a049;
+button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
 }
 
-.history {
-  margin-top: 30px;
-}
-
-ul {
-  list-style-type: none;
-  padding: 0;
-}
-
-li {
-  padding: 10px;
-  margin-bottom: 10px;
+.result {
+  min-height: 100px;
+  padding: 20px;
   border-radius: 4px;
-  position: relative;
-  border: 1px solid #ddd;
+  background-color: #f9f9f9;
 }
 
-.income {
-  color: green;
-  border-left: 4px solid green;
+.loader {
+  text-align: center;
+  color: #666;
 }
 
-.outcome {
-  color: red;
-  border-left: 4px solid red;
+.error {
+  color: #d32f2f;
+}
+
+.fact {
+  font-size: 18px;
+  line-height: 1.5;
 }
 </style>
