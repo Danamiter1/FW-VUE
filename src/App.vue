@@ -1,90 +1,65 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, computed } from 'vue'
+import Emoji from './components/Emoji.vue'
+import EmojiList from './components/EmojiList.vue'
+import EmojiMixer from './components/EmojiMixer.vue'
 
-const number = ref('')
-const category = ref('trivia')
-const fact = ref(null)
-const isLoading = ref(false)
-const error = ref(null)
+const emojis = ref([])
+const selectedSmiles = ref([null, null])
 
-const categories = [
-  { value: 'trivia', label: 'Случайный факт' },
-  { value: 'math', label: 'Факт из областики математики' },
-  { value: 'year', label: 'Факт о годе' }
-]
-
-const fetchFact = async () => {
-  if (!number.value) return
-  
-  isLoading.value = true
-  error.value = null
-  fact.value = null
-  
+const fetchEmojis = async () => {
   try {
-    const response = await fetch(`http://numbersapi.com/${number.value}/${category.value}?json`)
-    const data = await response.json()
-    
-    if (data.found) {
-      fact.value = data.text
-    } else {
-      error.value = `${number.value} - ${category.value === 'year' ? 'скучный год' : 'скучное число'}`
-    }
-  } catch (err) {
-    error.value = 'Произошла ошибка при получении данных'
-  } finally {
-    isLoading.value = false
+    const response = await fetch('https://emojihub.yurace.pro/api/all')
+    emojis.value = await response.json()
+  } catch (error) {
+    console.error('Error fetching emojis:', error)
   }
 }
 
-const handleKeyPress = (e) => {
-  if (e.key === 'Enter') {
-    fetchFact()
-  }
+const handleSelectEmoji = (index, emoji) => {
+  selectedSmiles.value[index] = emoji
 }
+
+onMounted(() => {
+  fetchEmojis()
+})
 </script>
 
 <template>
   <div class="app">
-    <h1>Факты о числах</h1>
+    <h1>Emoji Kitchen</h1>
     
-    <div class="controls">
-      <input
-        type="text"
-        v-model="number"
-        @keypress="handleKeyPress"
-        placeholder="Введите число или год"
-      />
-      
-      <select v-model="category">
-        <option 
-          v-for="option in categories" 
-          :key="option.value" 
-          :value="option.value"
-        >
-          {{ option.label }}
-        </option>
-      </select>
-      
-      <button @click="fetchFact" :disabled="isLoading || !number">
-        Поиск
-      </button>
-    </div>
-    
-    <div class="result">
-      <div v-if="isLoading" class="loader">Загрузка...</div>
-      
-      <div v-if="error" class="error">{{ error }}</div>
-      
-      <div v-if="fact" class="fact" style="color: black;">
-        {{ fact }}
+    <div class="container">
+      <div class="emoji-selectors">
+        <div class="selector">
+          <h2>Выберите первый эмоджи</h2>
+          <EmojiList 
+            :emojis="emojis" 
+            @select-emoji="(emoji) => handleSelectEmoji(0, emoji)"
+          />
+        </div>
+        
+        <div class="selector">
+          <h2>Выберите второй эмоджи</h2>
+          <EmojiList 
+            :emojis="emojis" 
+            @select-emoji="(emoji) => handleSelectEmoji(1, emoji)"
+          />
+        </div>
       </div>
+      
+      <EmojiMixer 
+        v-if="selectedSmiles[0] || selectedSmiles[1]"
+        :first-emoji="selectedSmiles[0]"
+        :second-emoji="selectedSmiles[1]"
+      />
     </div>
   </div>
 </template>
 
 <style scoped>
 .app {
-  max-width: 600px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
   font-family: Arial, sans-serif;
@@ -92,55 +67,34 @@ const handleKeyPress = (e) => {
 
 h1 {
   text-align: center;
-  color: #333;
+  margin-bottom: 30px;
 }
 
-.controls {
-  margin: auto;
+.container {
   display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
+  flex-direction: column;
+  gap: 30px;
 }
 
-input, select {
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+.emoji-selectors {
+  display: flex;
+  gap: 20px;
+}
+
+.selector {
   flex: 1;
+  border: 1px solid #ddd;
+  padding: 15px;
+  border-radius: 8px;
 }
 
-button {
-  padding: 10px 20px;
-  background-color: #4CAF50;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-button:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
-}
-
-.result {
-  min-height: 100px;
-  padding: 20px;
-  border-radius: 4px;
-  background-color: #f9f9f9;
-}
-
-.loader {
+h2 {
+  margin-top: 0;
   text-align: center;
-  color: #666;
 }
 
-.error {
-  color: #d32f2f;
-}
-
-.fact {
-  font-size: 18px;
-  line-height: 1.5;
+body {
+  background-color: #ffffff;
+  color: #333333;
 }
 </style>
